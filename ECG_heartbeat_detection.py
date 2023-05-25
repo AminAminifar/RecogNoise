@@ -1,9 +1,8 @@
 from ecgdetectors import Detectors
 from tqdm import tqdm
-import pickle
 import pandas as pd
+from IPython.display import display
 
-from IPython.display import display, HTML
 
 # detect r peaks
 fs = 360  # sample freq
@@ -40,11 +39,15 @@ def detect_and_save(records_df, ECG_algorithms, filename_str='r_peak_dictionary.
                 for arr in signals:
                     out_flag, result = r_peak_detect(arr, alg)
 
-                    if not out_flag:
+                    if not out_flag:  # might be changed for 'engzee_detector'
                         result = []
+                    else:
+                        result = [result]
+
                     dictionary = {'patient': patient, 'channel': channel, 'algorithm': alg,
                                   'out_flag': out_flag, 'r_peak': result}
                     temp_df = pd.DataFrame(dictionary)
+                    # display(temp_df)
 
                     df = pd.concat([df, temp_df], ignore_index=True)
                     df.reset_index()
@@ -52,7 +55,8 @@ def detect_and_save(records_df, ECG_algorithms, filename_str='r_peak_dictionary.
                     sum_records += 1
                     if out_flag:
                         sum_true += 1
-        print("\npercentage of samples with no error: ", (sum_true/sum_records)*100, "%")
+        print("\npercentage of samples with no error: ", (sum_true/sum_records)*100, "%. ",
+              "sum_true: ", sum_true, "sum_records: ", sum_records)
         print("next algorithm...")
 
     print("performed the r peak detection for all algorithms in the list.")

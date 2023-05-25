@@ -19,7 +19,7 @@ def import_data(noisy_flag=False, noise_str="e24"):
             # if we need the whole signal as one records:
             # records_list.append(sig_f)
             # (else) if we need to split the signal:
-            splitted_signals = [np.split(sig_f[:649980], 30)] # 648000
+            splitted_signals = [np.split(sig_f[:649980], 30)]  # 648000
 
             dictionary = {'patient': record, 'channel': ch, 'signals': splitted_signals}
             temp_df = pd.DataFrame(dictionary)
