@@ -3,23 +3,21 @@ from wfdb.io.record import rdsamp
 import pandas as pd
 
 
-def import_data(noisy_flag=False, noise_str="e24"):
+def import_data(noise_str="e_6"):
     # Import original signals
-    records = np.loadtxt("mit-bih-arrhythmia-database-1.0.0/RECORDS", dtype=int)
+    records = np.loadtxt("signals_including_noise/RECORDS", dtype=int)
     # num_records = len(records)
     num_channels = 2
     records_df = pd.DataFrame(columns=['patient', 'channel', 'signals'])
     for record in records:
         for ch in range(num_channels):
-            if noisy_flag:
-                sig, _ = rdsamp('mit-bih-arrhythmia-database-1.0.0/' + str(record) + noise_str, channels=[ch])
-            else:
-                sig, _ = rdsamp('mit-bih-arrhythmia-database-1.0.0/' + str(record), channels=[ch])
+            sig, _ = rdsamp('signals_including_noise/mitbih_e_6/' + str(record) + noise_str, channels=[ch])
             sig_f = sig.flatten()
             # if we need the whole signal as one records:
             # records_list.append(sig_f)
             # (else) if we need to split the signal:
-            splitted_signals = [np.split(sig_f[:649980], 30)]  # 648000
+            num_windows = 30*3  # 20 seconds
+            splitted_signals = [np.split(sig_f[:648000], num_windows)]  # 648000 = 30 * 60 * 360
 
             dictionary = {'patient': record, 'channel': ch, 'signals': splitted_signals}
             temp_df = pd.DataFrame(dictionary)
