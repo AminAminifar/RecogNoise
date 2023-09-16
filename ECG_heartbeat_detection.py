@@ -53,15 +53,15 @@ def detect_and_save(records_df, ECG_r_peak_detection_algorithms, filename_str='r
                     out_flag, result = r_peak_detect(arr, alg)
 
                     if not out_flag:  # might be changed for 'engzee_detector'
-                        result = []
+                        result = [0]
                         rr_intervals_vec_len = 0
-                        rr_intervals_result = []
+                        rr_intervals_result = [0]  # [] did not work
                     else:
                         rr_intervals_vec_len = len(result) - 1
                         if rr_intervals_vec_len > 0:
                             rr_intervals_result = [get_rr_intervals(np.array(result))]
                         else:
-                            rr_intervals_result = []
+                            rr_intervals_result = [0]  # [] did not work
                         result = [np.array(result)]
 
                     minute_index = int(math.floor(i/3))  # since every minute was divided by 3
@@ -70,6 +70,7 @@ def detect_and_save(records_df, ECG_r_peak_detection_algorithms, filename_str='r
                                   'noise_label': noise_label_per_minute[minute_index], 'algorithm': alg,
                                   'out_flag': out_flag, 'r_peak': result, 'rr_intervals': rr_intervals_result,
                                   'rr_intervals_vec_length': rr_intervals_vec_len}
+
                     temp_df = pd.DataFrame(dictionary)
                     # display(temp_df)
 

@@ -4,11 +4,12 @@ import matplotlib.pyplot as plt
 
 # sig, fields = rdsamp('data/em', channels=[0])
 # sig, fields = rdsamp('data/118e_6', channels=[0])
-sig, fields = rdsamp('signals_including_noise/mitbih_e_6/115e_6', channels=[0])
+# sig, fields = rdsamp('signals_including_noise/mitbih_e_6/115e_6', channels=[0])
+sig, fields = rdsamp('signals_including_noise/b_6/mitbih_b_6/115b_6', channels=[0])
 print(len(sig))
 print(fields)
 
-minute = 4
+minute = 5
 start = minute * 60 + 0
 end = minute * 60 + 60
 fs = 360
