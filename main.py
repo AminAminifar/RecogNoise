@@ -15,7 +15,7 @@ Analysis_mixed = True
 Analysis_mixed_snr = False
 Analysis_mixed_all = not Analysis_mixed_snr  # True
 
-num_iterations = 10
+num_iterations = 100
 num_metrics = 4
 result_mat = np.zeros((num_iterations, num_metrics))
 
@@ -67,34 +67,50 @@ if r_peak_detect_save_flag:
 # Import r-peak detection results (r peaks, rr intervals, etc.)
 if Analysis_one_noise_snr:
     print("\nAnalysis_one_noise_snr: ")
-    print("num iterations: ", num_iterations, "\n")
-    for iteration in tqdm(range(num_iterations)):
-        # records_df = pd.read_pickle("signals_including_noise/e_6/records_df_e_6.pkl")
-        # records_df = pd.read_pickle("signals_including_noise/e00/records_df_e00.pkl")
-        records_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
-        # print(">>>>", records_df.query('out_flag == False').index)
-        # records_df = pd.read_pickle("signals_including_noise/no_noise/records_df.pkl")
-        # print(records_df.shape)
 
-        # length = records_df['r_peak'].apply(len)
-        # min_length = length.min()
-        # max_length = length.max()
-        # mean_length = length.mean()
-        # std_length = length.std()
-        # print(min_length, max_length, mean_length, std_length)
+    df = pd.DataFrame(columns=['noise_str', 'f1_performance', 'acc_performance',
+                               'precision_performance', 'recall_performance'])
 
-        # Analysis
-        # print("\npreparing X_train, X_test, y_train, y_test...")
-        X_train, X_test, y_train, y_test = Analysis.data_preparation(records_df)
+    noise_str_list = em_str_list + bw_str_list + ma_str_list
+    for noise_str in noise_str_list:
+        print("noise_str: ", noise_str, "\n")
+        print("num iterations: ", num_iterations, "\n")
 
-        # print('\nbuilding the model...')
-        model = Analysis.build_ml_model(X_train, y_train)
+        for iteration in tqdm(range(num_iterations)):
+            # records_df = pd.read_pickle("signals_including_noise/e_6/records_df_e_6.pkl")
+            # records_df = pd.read_pickle("signals_including_noise/e00/records_df_e00.pkl")
+            records_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
+            # print(">>>>", records_df.query('out_flag == False').index)
+            # records_df = pd.read_pickle("signals_including_noise/no_noise/records_df.pkl")
+            # print(records_df.shape)
 
-        # print('\nevaluation of the model...')
-        result_mat[iteration, :] = Analysis.evaluate(model, X_test, y_test)
+            # length = records_df['r_peak'].apply(len)
+            # min_length = length.min()
+            # max_length = length.max()
+            # mean_length = length.mean()
+            # std_length = length.std()
+            # print(min_length, max_length, mean_length, std_length)
 
-    mean_results = np.mean(result_mat, axis=0)
-    print("\nmean values for f1_performance, acc_performance, precision_performance, recall_performance:", mean_results)
+            # Analysis
+            # print("\npreparing X_train, X_test, y_train, y_test...")
+            X_train, X_test, y_train, y_test = Analysis.data_preparation(records_df)
+
+            # print('\nbuilding the model...')
+            model = Analysis.build_ml_model(X_train, y_train)
+
+            # print('\nevaluation of the model...')
+            result_mat[iteration, :] = Analysis.evaluate(model, X_test, y_test)
+
+        mean_results = np.mean(result_mat, axis=0)
+        print("\nmean values for f1_performance, acc_performance, "
+              "precision_performance, recall_performance:", mean_results)
+        dictionary = {'noise_str': noise_str, 'f1_performance': [mean_results[0]], 'acc_performance': [mean_results[1]],
+                      'precision_performance': [mean_results[2]], 'recall_performance': [mean_results[3]]}
+
+        temp_df = pd.DataFrame(dictionary)
+        df = pd.concat([df, temp_df], ignore_index=True)
+        df.reset_index()
+    df.to_csv('results_for_Analysis_one_noise_snr.csv', index=False)
 
 if Analysis_mixed:
     if Analysis_mixed_snr:
