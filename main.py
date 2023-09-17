@@ -6,18 +6,25 @@ import pandas as pd
 from IPython.display import display
 import Analysis
 from sklearn.utils import shuffle
+from tqdm import tqdm
 
 Import_data_flag = False
 r_peak_detect_save_flag = False  # True False
-Import_r_peaks_flag = False  # True False
-Analysis_mixed_snr = True
+Analysis_one_noise_snr = True
+Analysis_mixed = True
+Analysis_mixed_snr = False
+Analysis_mixed_all = not Analysis_mixed_snr  # True
+
+num_iterations = 10
+num_metrics = 4
+result_mat = np.zeros((num_iterations, num_metrics))
 
 em_str_list = ['e_6', 'e00', 'e06', 'e12', 'e18', 'e24']
 bw_str_list = ['b_6', 'b00', 'b06', 'b12', 'b18', 'b24']
 ma_str_list = ['m_6', 'm00', 'm06', 'm12', 'm18', 'm24']
 
 noise_str = bw_str_list[0]  # bw_str_list[5] ma_str_list[5]
-print("noise_str: ", noise_str)
+print("noise_str: ", noise_str, "\n")
 
 # Import Data
 if Import_data_flag:
@@ -58,60 +65,80 @@ if r_peak_detect_save_flag:
 
 
 # Import r-peak detection results (r peaks, rr intervals, etc.)
-if Import_r_peaks_flag:
-    # records_df = pd.read_pickle("signals_including_noise/e_6/records_df_e_6.pkl")
-    # records_df = pd.read_pickle("signals_including_noise/e00/records_df_e00.pkl")
-    records_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
-    print(">>>>", records_df.query('out_flag == False').index)
-    # records_df = pd.read_pickle("signals_including_noise/no_noise/records_df.pkl")
-    print(records_df.shape)
+if Analysis_one_noise_snr:
+    print("\nAnalysis_one_noise_snr: ")
+    print("num iterations: ", num_iterations, "\n")
+    for iteration in tqdm(range(num_iterations)):
+        # records_df = pd.read_pickle("signals_including_noise/e_6/records_df_e_6.pkl")
+        # records_df = pd.read_pickle("signals_including_noise/e00/records_df_e00.pkl")
+        records_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
+        # print(">>>>", records_df.query('out_flag == False').index)
+        # records_df = pd.read_pickle("signals_including_noise/no_noise/records_df.pkl")
+        # print(records_df.shape)
 
-    # length = records_df['r_peak'].apply(len)
-    # min_length = length.min()
-    # max_length = length.max()
-    # mean_length = length.mean()
-    # std_length = length.std()
-    # print(min_length, max_length, mean_length, std_length)
+        # length = records_df['r_peak'].apply(len)
+        # min_length = length.min()
+        # max_length = length.max()
+        # mean_length = length.mean()
+        # std_length = length.std()
+        # print(min_length, max_length, mean_length, std_length)
 
-    # Analysis
-    print("\npreparing X_train, X_test, y_train, y_test...")
-    X_train, X_test, y_train, y_test = Analysis.data_preparation(records_df)
+        # Analysis
+        # print("\npreparing X_train, X_test, y_train, y_test...")
+        X_train, X_test, y_train, y_test = Analysis.data_preparation(records_df)
 
-    print('\nbuilding the model...')
-    model = Analysis.build_ml_model(X_train, y_train)
+        # print('\nbuilding the model...')
+        model = Analysis.build_ml_model(X_train, y_train)
 
-    print('\nevaluation of the model...')
-    Analysis.evaluate(model, X_test, y_test)
+        # print('\nevaluation of the model...')
+        result_mat[iteration, :] = Analysis.evaluate(model, X_test, y_test)
 
-if Analysis_mixed_snr:
-    noise_str_list = em_str_list  # ma_str_list  bw_str_list  em_str_list
+    mean_results = np.mean(result_mat, axis=0)
+    print("\nmean values for f1_performance, acc_performance, precision_performance, recall_performance:", mean_results)
 
-    noise_str = noise_str_list[0]
-    records_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
+if Analysis_mixed:
+    if Analysis_mixed_snr:
+        noise_str_list = em_str_list  # ma_str_list  bw_str_list  em_str_list
+        print("\nAnalysis_mixed_snr: ")
+    elif Analysis_mixed_all:
+        noise_str_list = em_str_list + bw_str_list + ma_str_list
+        # print(noise_str_list)
+        print("\nAnalysis_mixed_all: ")
 
-    indices_noisy_records = records_df.query('noise_label == 1').index
-    num_noisy_records = len(indices_noisy_records)
-    num_chunks = len(noise_str_list)
-    chunk_indices = np.array_split(shuffle(indices_noisy_records), num_chunks)
-    # print("num_chunks, num_noisy_records: ", num_chunks, num_noisy_records)
+    print("num iterations: ", num_iterations, "\n")
+    for iteration in tqdm(range(num_iterations)):
 
-    for i in range(1, num_chunks):
-        noise_str = noise_str_list[i]
-        temp_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
+        noise_str = noise_str_list[0]
+        records_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
 
-        records_df.loc[chunk_indices[i], 'rr_intervals'] = temp_df.loc[chunk_indices[i], 'rr_intervals']
-        # not necessary for our analysis
-        records_df.loc[chunk_indices[i], 'r_peak'] = temp_df.loc[chunk_indices[i], 'r_peak']
-        # not necessary for our analysis
-        records_df.loc[chunk_indices[i], 'rr_intervals_vec_length'] = temp_df.loc[chunk_indices[i], 'rr_intervals_vec_length']
+        indices_noisy_records = records_df.query('noise_label == 1').index
+        num_noisy_records = len(indices_noisy_records)
+        num_chunks = len(noise_str_list)
+        chunk_indices = np.array_split(shuffle(indices_noisy_records), num_chunks)
+        # print("num_chunks, num_noisy_records: ", num_chunks, num_noisy_records)
 
-    # Analysis
-    print("\npreparing X_train, X_test, y_train, y_test...")
-    X_train, X_test, y_train, y_test = Analysis.data_preparation(records_df)
+        for i in range(1, num_chunks):
+            noise_str = noise_str_list[i]
+            temp_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
 
-    print('\nbuilding the model...')
-    model = Analysis.build_ml_model(X_train, y_train)
+            records_df.loc[chunk_indices[i], 'rr_intervals'] = temp_df.loc[chunk_indices[i], 'rr_intervals']
+            # not necessary for our analysis
+            records_df.loc[chunk_indices[i], 'r_peak'] = temp_df.loc[chunk_indices[i], 'r_peak']
+            # not necessary for our analysis
+            records_df.loc[chunk_indices[i], 'rr_intervals_vec_length'] = temp_df.loc[chunk_indices[i], 'rr_intervals_vec_length']
 
-    print('\nevaluation of the model...')
-    Analysis.evaluate(model, X_test, y_test)
+        # Analysis
 
+
+        # print("\npreparing X_train, X_test, y_train, y_test...")
+        X_train, X_test, y_train, y_test = Analysis.data_preparation(records_df)
+
+        # print('\nbuilding the model...')
+        model = Analysis.build_ml_model(X_train, y_train)
+
+        # print('\nevaluation of the model...')
+        result_mat[iteration, :] = Analysis.evaluate(model, X_test, y_test)
+        # print(result_mat[iteration, :])
+
+    mean_results = np.mean(result_mat, axis=0)
+    print("\nmean values for f1_performance, acc_performance, precision_performance, recall_performance:", mean_results)

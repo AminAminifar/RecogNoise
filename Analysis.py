@@ -69,7 +69,8 @@ def get_one_record_based_on_sorted_rr_intervals(data_df, vec_length, channel, wi
         try:
             sorted_rr_intervals = np.sort(data_df.loc[index, 'rr_intervals'])[::-1]
         except np.exceptions.AxisError:
-            print("numpy.exceptions.AxisError")
+            pass
+            # print("numpy.exceptions.AxisError")  # for tqdm
             # print(data_df.loc[index, 'algorithm'])
             # print(data_df.loc[index, 'rr_intervals'])
 
@@ -100,22 +101,25 @@ def build_ml_model(X_train, y_train):
     return clf_rf
 
 
-def evaluate(model, X_test, y_test):
+def evaluate(model, X_test, y_test, print_flag=False):
     # predict
     y_pred = model.predict(X_test)
     y_true = y_test
 
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
-    f1_performance = f1_score(y_true, y_pred, average='weighted')
+    f1_performance = f1_score(y_true, y_pred)  # , average='weighted'
     acc_performance = accuracy_score(y_true, y_pred)
     precision_performance = precision_score(y_true, y_pred)
     recall_performance = recall_score(y_true, y_pred)
 
-    print("tn, fp, fn, tp: ", tn, fp, fn, tp)
-    print("f1_performance: ", f1_performance)
-    print("acc_performance", acc_performance)
-    print("precision_performance", precision_performance)
-    print("recall_performance", recall_performance)
+    if print_flag:
+        print("tn, fp, fn, tp: ", tn, fp, fn, tp)
+        print("f1_performance: ", f1_performance)
+        print("acc_performance", acc_performance)
+        print("precision_performance", precision_performance)
+        print("recall_performance", recall_performance)
 
-    print("\nclassification_report")
-    print(classification_report(y_true, y_pred, target_names=['non noise', 'noise']))
+        print("\nclassification_report")
+        print(classification_report(y_true, y_pred, target_names=['non noise', 'noise']))
+
+    return f1_performance, acc_performance, precision_performance, recall_performance
