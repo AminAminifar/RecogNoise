@@ -12,7 +12,7 @@ def import_data(records_folder_add, noise_str="e_6"):  # noise_str="e24"
     for record in records:
         for ch in range(num_channels):
             # sig, _ = rdsamp('signals_including_noise/mitbih_e_6/' + str(record) + noise_str, channels=[ch])
-            sig, _ = rdsamp( records_folder_add + str(record) + noise_str, channels=[ch])
+            sig, _ = rdsamp(records_folder_add + str(record) + noise_str, channels=[ch])
             # sig, _ = rdsamp('signals_including_noise/no_noise/mitbih/' + str(record), channels=[ch])  # no noise
             sig_f = sig.flatten()
             # if we need the whole signal as one records:
