@@ -10,10 +10,11 @@ from tqdm import tqdm
 
 Import_data_flag = False
 r_peak_detect_save_flag = False  # True False
-Analysis_one_noise_snr = True
-Analysis_mixed = True
-Analysis_mixed_snr = False
+Analysis_one_noise_snr = False
+Analysis_mixed = False
+Analysis_mixed_snr = True
 Analysis_mixed_all = not Analysis_mixed_snr  # True
+Analysis_selective_algorithms = True
 
 num_iterations = 100
 num_metrics = 4
@@ -79,7 +80,7 @@ if Analysis_one_noise_snr:
         for iteration in tqdm(range(num_iterations)):
             # records_df = pd.read_pickle("signals_including_noise/e_6/records_df_e_6.pkl")
             # records_df = pd.read_pickle("signals_including_noise/e00/records_df_e00.pkl")
-            records_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
+            records_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl') # can go outside iteration loop
             # print(">>>>", records_df.query('out_flag == False').index)
             # records_df = pd.read_pickle("signals_including_noise/no_noise/records_df.pkl")
             # print(records_df.shape)
@@ -110,11 +111,11 @@ if Analysis_one_noise_snr:
         temp_df = pd.DataFrame(dictionary)
         df = pd.concat([df, temp_df], ignore_index=True)
         df.reset_index()
-    df.to_csv('results_for_Analysis_one_noise_snr.csv', index=False)
+        df.to_csv('results_for_Analysis_one_noise_snr.csv', index=False)
 
 if Analysis_mixed:
     if Analysis_mixed_snr:
-        noise_str_list = em_str_list  # ma_str_list  bw_str_list  em_str_list
+        noise_str_list = bw_str_list  # ma_str_list  bw_str_list  em_str_list
         print("\nAnalysis_mixed_snr: ")
     elif Analysis_mixed_all:
         noise_str_list = em_str_list + bw_str_list + ma_str_list
@@ -158,3 +159,59 @@ if Analysis_mixed:
 
     mean_results = np.mean(result_mat, axis=0)
     print("\nmean values for f1_performance, acc_performance, precision_performance, recall_performance:", mean_results)
+
+
+if Analysis_selective_algorithms:
+    print("\nAnalysis_selective_algorithms: ")
+
+    df = pd.DataFrame(columns=['noise_str', 'f1_performance', 'acc_performance',
+                               'precision_performance', 'recall_performance'])
+
+    ECG_r_peak_detection_algorithms = ['hamilton_detector', 'christov_detector', 'pan_tompkins_detector',
+                                       'swt_detector', 'two_average_detector', 'matched_filter_detector',
+                                       'wqrs_detector']
+    num_algorithms = 4
+    algorithms_indices = range(0, 7)
+
+    noise_str_list = em_str_list + bw_str_list + ma_str_list
+    for noise_str in noise_str_list:
+        print("noise_str: ", noise_str, "\n")
+        print("num iterations: ", num_iterations, "\n")
+
+        records_df = pd.read_pickle('signals_including_noise/' + noise_str + '/records_df_' + noise_str + '.pkl')
+
+        for iteration in tqdm(range(num_iterations)):
+
+            algorithms_indices_shuffled = shuffle(algorithms_indices)
+            random_indices = algorithms_indices_shuffled[:num_algorithms]
+            randomly_selected_algorithms = np.array(ECG_r_peak_detection_algorithms)[random_indices]
+            alg_query = "algorithm == "
+            for i, alg in enumerate(randomly_selected_algorithms):
+                if i>0:
+                    alg_query += ' or algorithm == '
+                alg_query += "'" + alg + "'"
+
+            # "algorithm == randomly_selected_algorithms[]" or algorithm == 'hamilton_detector'
+            indices_records_selected_algorithms = records_df.query(alg_query).index
+            # print(alg_query, indices_records_selected_algorithms,
+            #       len(indices_records_selected_algorithms), len(records_df))
+            selected_records_df = records_df.loc[indices_records_selected_algorithms]
+
+            X_train, X_test, y_train, y_test = Analysis.data_preparation(selected_records_df)
+
+            # print('\nbuilding the model...')
+            model = Analysis.build_ml_model(X_train, y_train)
+
+            # print('\nevaluation of the model...')
+            result_mat[iteration, :] = Analysis.evaluate(model, X_test, y_test)  # result_mat[iteration, :]
+
+        mean_results = np.mean(result_mat, axis=0)
+        print("\nmean values for f1_performance, acc_performance, "
+              "precision_performance, recall_performance:", mean_results)
+        dictionary = {'noise_str': noise_str, 'f1_performance': [mean_results[0]], 'acc_performance': [mean_results[1]],
+                      'precision_performance': [mean_results[2]], 'recall_performance': [mean_results[3]]}
+
+        temp_df = pd.DataFrame(dictionary)
+        df = pd.concat([df, temp_df], ignore_index=True)
+        df.reset_index()
+        df.to_csv('results_for_Analysis_one_noise_snr_four_algorithm.csv', index=False)
