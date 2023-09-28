@@ -11,14 +11,17 @@ from tqdm import tqdm
 Import_data_flag = False
 r_peak_detect_save_flag = False  # True False
 Analysis_one_noise_snr = False
-Analysis_mixed = False
-Analysis_mixed_snr = True
+Analysis_mixed = True
+Analysis_mixed_snr = False
 Analysis_mixed_all = not Analysis_mixed_snr  # True
-Analysis_selective_algorithms = True
+Analysis_selective_algorithms = False
+Analysis_mixed_all_multi_model = False
 
 num_iterations = 100
 num_metrics = 4
 result_mat = np.zeros((num_iterations, num_metrics))
+num_ml_models = 6
+result_mat_multi_model = np.zeros((num_iterations, num_metrics, num_ml_models))
 
 em_str_list = ['e_6', 'e00', 'e06', 'e12', 'e18', 'e24']
 bw_str_list = ['b_6', 'b00', 'b06', 'b12', 'b18', 'b24']
@@ -121,6 +124,9 @@ if Analysis_mixed:
         noise_str_list = em_str_list + bw_str_list + ma_str_list
         # print(noise_str_list)
         print("\nAnalysis_mixed_all: ")
+        if Analysis_mixed_all_multi_model:
+            df = pd.DataFrame(columns=['model', 'f1_performance', 'acc_performance',
+                                       'precision_performance', 'recall_performance'])
 
     print("num iterations: ", num_iterations, "\n")
     for iteration in tqdm(range(num_iterations)):
@@ -150,15 +156,36 @@ if Analysis_mixed:
         # print("\npreparing X_train, X_test, y_train, y_test...")
         X_train, X_test, y_train, y_test = Analysis.data_preparation(records_df)
 
-        # print('\nbuilding the model...')
-        model = Analysis.build_ml_model(X_train, y_train)
+        if Analysis_mixed_snr or (Analysis_mixed_all and not Analysis_mixed_all_multi_model):
+            # print('\nbuilding the model...')
+            model = Analysis.build_ml_model(X_train, y_train)
 
-        # print('\nevaluation of the model...')
-        result_mat[iteration, :] = Analysis.evaluate(model, X_test, y_test)
-        # print(result_mat[iteration, :])
+            # print('\nevaluation of the model...')
+            result_mat[iteration, :] = Analysis.evaluate(model, X_test, y_test)
+            # print(result_mat[iteration, :])
+        elif Analysis_mixed_all and Analysis_mixed_all_multi_model:
+            clf_ert, clf_rf, clf_xgb, clf_dt, clf_ls, clf_rbfsvm = Analysis.build_several_ml_model(X_train, y_train)
 
-    mean_results = np.mean(result_mat, axis=0)
-    print("\nmean values for f1_performance, acc_performance, precision_performance, recall_performance:", mean_results)
+            for model_i, model in enumerate([clf_ert, clf_rf, clf_xgb, clf_dt, clf_ls, clf_rbfsvm]):
+                result_mat_multi_model[iteration, :, model_i] = Analysis.evaluate(model, X_test, y_test)
+
+    # save results
+    if Analysis_mixed_snr or (Analysis_mixed_all and not Analysis_mixed_all_multi_model):
+        mean_results = np.mean(result_mat, axis=0)
+        print("\nmean values for f1_performance, acc_performance, precision_performance, recall_performance:", mean_results)
+    elif Analysis_mixed_all and Analysis_mixed_all_multi_model:
+        mean_results = np.mean(result_mat_multi_model, axis=0)
+
+        for model_i, model_str in enumerate(['clf_ert', 'clf_rf', 'clf_xgb', 'clf_dt', 'clf_ls', 'clf_rbfsvm']):
+            dictionary = {'model': model_str, 'f1_performance': [mean_results[0, model_i]],
+                          'acc_performance': [mean_results[1, model_i]],
+                          'precision_performance': [mean_results[2, model_i]],
+                          'recall_performance': [mean_results[3, model_i]]}
+
+            temp_df = pd.DataFrame(dictionary)
+            df = pd.concat([df, temp_df], ignore_index=True)
+            df.reset_index()
+            df.to_csv('results_for_Analysis_mixed_all_multi_model.csv', index=False)
 
 
 if Analysis_selective_algorithms:

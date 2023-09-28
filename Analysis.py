@@ -2,6 +2,11 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix, classification_report, precision_score, recall_score
 from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import SVC, LinearSVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from xgboost import XGBClassifier
 
 # def get_rr_intervals(r_peak_vector):
 #     rr_intervals_vec = r_peak_vector[1:]
@@ -97,8 +102,23 @@ def build_ml_model(X_train, y_train):
     # clf_ert = ExtraTreesClassifier(n_estimators=100).fit(X_train, y_train)
     clf_rf = RandomForestClassifier(n_estimators=100).fit(X_train, y_train)
     # clf_xgb = GradientBoostingClassifier(n_estimators=100).fit(X_train, y_train)
+    # clf_gb = GradientBoostingClassifier(n_estimators=100).fit(X_train, y_train)
+    # clf_xgb = XGBClassifier(n_jobs=1).fit(X_train, y_train)
 
     return clf_rf
+
+def build_several_ml_model(X_train, y_train):
+    # train
+    clf_ert = ExtraTreesClassifier(n_estimators=100).fit(X_train, y_train)
+    clf_rf = RandomForestClassifier(n_estimators=100).fit(X_train, y_train)
+    # clf_xgb = GradientBoostingClassifier(n_estimators=100).fit(X_train, y_train)
+    clf_gb = GradientBoostingClassifier(n_estimators=100).fit(X_train, y_train)
+    clf_xgb = XGBClassifier(n_jobs=1).fit(X_train, y_train)
+    clf_dt = DecisionTreeClassifier().fit(X_train, y_train)
+    clf_ls = make_pipeline(StandardScaler(), LinearSVC()).fit(X_train, y_train)
+    clf_rbfsvm = make_pipeline(StandardScaler(), SVC()).fit(X_train, y_train)
+
+    return clf_ert, clf_rf, clf_xgb, clf_dt, clf_ls, clf_rbfsvm
 
 
 def evaluate(model, X_test, y_test, print_flag=False):
